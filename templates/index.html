@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<script src='https://api.mapbox.com/mapbox-gl-js/v0.44.2/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v0.44.2/mapbox-gl.css' rel='stylesheet' />
+<style>
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .form-container {
+        padding: 40px;
+        border-radius: 10px;
+        background: linear-gradient(to right, #032275, #007bff);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-heading {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 28px;
+        color: #ffffff;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #cccccc;
+        border-radius: 10px;
+        box-sizing: border-box;
+        font-size: 16px;
+        color: #333333;
+        background-color: #f8f9fa;
+    }
+
+    .form-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #0056b3;
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        font-size: 18px;
+        text-transform: uppercase;
+    }
+
+    .form-button:hover {
+        background-color: #1e2880;
+    }
+
+    .form-label {
+        font-size: 18px;
+        color: #ffffff;
+        margin-bottom: 8px;
+    }
+
+    .form-input-wrapper {
+        position: relative;
+    }
+
+    .form-input-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 10px;
+        color: #999999;
+    }
+
+    .grid-point-container {
+        margin-top: 20px;
+    }
+
+    .grid-point-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .grid-point-table th, .grid-point-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .grid-point-table th {
+        background-color: #f2f2f2;
+    }
+
+    .grid-point-table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .grid-point-table tr:hover {
+        background-color: #ddd;
+    }
+
+  
+   
+</style>
+
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <div class="form-container">
+        <h2 class="form-heading">Enter Latitude and Longitude</h2>
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-input-wrapper">
+                <label for="latitude" class="form-label">Latitude</label>
+                <input type="text" id="latitude" class="form-input" name="lat" placeholder="Enter Latitude">
+            </div>
+            <div class="form-input-wrapper mb-3">
+                <label for="longitude" class="form-label">Longitude</label>
+                <input type="text" id="longitude" class="form-input" name="lon" placeholder="Enter Longitude">
+            </div>
+            <div class="form-input-wrapper">
+                <label for="csv_file" class="form-label">Upload CSV File</label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv">
+            </div>
+            <button type="submit"  class="form-button mt-4" style="background-color: #007bff;">Submit</button>
+        </form>
+        <div class="table-responsive mt-4">
+            
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th scope="col">Latitude</th>
+                        <th scope="col">Longitude</th>
+                        <th scope="col">Computed Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if error_message %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error_message }}
+                    </div>
+                    {% endif %}
+
+                    {% if exact_point %}
+                        <tr>
+                            <td>{{ exact_point.latitude }}</td>
+                            <td>{{ exact_point.longitude }}</td>
+                            <td>
+                                <div class="card mb-3">
+                                    <div class="card-header bg-primary text-white">
+                                        Exact Point
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Value:</strong> {{ exact_point.value }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                    
+                    {% if average_value %}
+                        <tr>
+                            <td>{{ lat_data }}</td>
+                            <td>{{ lon_data }}</td>
+                            <td>
+                                <div class="card mb-3">
+                                    <div class="card-header bg-info text-white">
+                                        Average Value
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Value:</strong> {{ average_value }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+
+                    {% if points_data %}
+                    <a href="{% url 'download_processed_csv' %}" class="btn btn-primary mb-3">Download Processed CSV</a>
+                    {% endif %}
+                    
+                    {% for data in points_data %}
+                        <tr>
+                            <td>{{ data.latitude }}</td>
+                            <td>{{ data.longitude }}</td>
+                            <td>
+                                {% if data.exact_point %}
+                                    <div class="card mb-3">
+                                        
+                                        <div class="card-body">
+                                            <p class="card-text">
+                                                {{ data.exact_point.value }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% elif data.average_value %}
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <p class="card-text">
+                                                {{ data.average_value }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                {% elif data.error_message %}
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ data.error_message }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        
+        </div>
+        <div id='map' width="100%" style='height:400px'></div>
+       
+    </div>
+    
+</div>
+
+{% endblock %}
+
+
+{% block js %}
+
+{% endblock js %}
